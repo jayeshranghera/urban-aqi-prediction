@@ -92,6 +92,6 @@ The project is Docker-ready and suitable for platforms such as Hugging Face Spac
 
 - **Name:** Jayesh Ranghera
 - **GitHub:** [jayeshranghera](https://github.com/jayeshranghera)
-- **LinkedIn:** [Add your LinkedIn URL](https://www.linkedin.com/)
-- **Portfolio:** [Add your portfolio URL](https://example.com)
-- **Email:** [Add your email](mailto:your.email@example.com)
+- **LinkedIn:** (https://www.linkedin.com/in/jayeshranghera/)
+- **Portfolio:** https://jayeshranghera.github.io/
+- **Email:** jayeshranghera30@gmail.com
