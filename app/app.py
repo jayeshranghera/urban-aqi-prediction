@@ -1,12 +1,29 @@
-import streamlit as st
-import pandas as pd
+import sys
 from pathlib import Path
 
-# page config
-st.set_page_config(page_title="Urban AQI Prediction", layout="wide")
+import pandas as pd
+import streamlit as st
 
-# basic CSS to make it look clean without overengineering
-st.markdown("""
+APP_DIR = Path(__file__).resolve().parent
+ROOT = APP_DIR.parent
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(APP_DIR))
+
+from aqi_data import (  # noqa: E402
+    CITIES_WITH_AQ,
+    data_source_line,
+    latest_row,
+    no2_band,
+    plain_summary,
+    pm10_band,
+    pm25_band,
+    project_paths_ok,
+)
+
+st.set_page_config(page_title="Urban AQI — Dashboard", layout="wide")
+
+st.markdown(
+    """
     <style>
     .metric-card {
         padding: 20px;
@@ -17,32 +34,65 @@ st.markdown("""
     }
     .good { border-left: 5px solid #2ecc71; }
     .moderate { border-left: 5px solid #f1c40f; }
-    .poor { border-left: 5px solid #e74c3c; }
+    .poor { border-left: 5px solid #e67e22; }
+    .very_poor { border-left: 5px solid #e74c3c; }
+    .extremely_poor { border-left: 5px solid #9b59b6; }
     </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
-st.title("Urban AQI Prediction Dashboard")
+st.title("Urban air quality — overview")
 
-# sidebar city selector
-city_options = ["Berlin", "Madrid", "Paris", "Rome"]
-selected_city = st.sidebar.selectbox("Select City", city_options)
+ok, missing = project_paths_ok()
+if not ok:
+    st.error(
+        "Required artefacts are missing. From the repository root, run `python scripts/run_pipeline.py`, "
+        "or execute the notebooks in order (01 → 05)."
+    )
+    st.code("\n".join(missing))
+    st.stop()
 
-st.write(f"### Current Air Quality Overview: {selected_city}")
+selected_city = st.sidebar.selectbox("City", CITIES_WITH_AQ)
 
-# placeholder for data loading
-# in a real run, this would load from processed/features.parquet or similar
-st.write("Welcome to the Urban AQI Prediction tool. This dashboard helps you understand the current air quality, next 7-day forecast, and policy compliance for major European cities.")
+st.subheader(f"Latest hour — {selected_city}")
 
-st.info(f"Currently viewing data for {selected_city}. Use the sidebar pages to navigate through Forecasts, Comparisons, and Policy Analysis.")
+st.caption(
+    "Berlin and Madrid use **EEA** in-situ hourly measurements; Paris and Rome use **Open-Meteo** air-quality fields (CAMS European) "
+    "at representative coordinates, each merged with **Open-Meteo** weather. Threshold bands follow `data/raw/rules/eu_aqi_policy_thresholds.csv`."
+)
 
-# dummy current metrics until the model runs
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.markdown('<div class="metric-card good"><h4>PM2.5</h4><h2>12 µg/m³</h2><p>Good</p></div>', unsafe_allow_html=True)
-with col2:
-    st.markdown('<div class="metric-card moderate"><h4>PM10</h4><h2>26 µg/m³</h2><p>Moderate</p></div>', unsafe_allow_html=True)
-with col3:
-    st.markdown('<div class="metric-card poor"><h4>NO2</h4><h2>95 µg/m³</h2><p>Poor</p></div>', unsafe_allow_html=True)
+row = latest_row(selected_city)
+if row is None:
+    st.warning(f"No rows found for {selected_city}.")
+    st.stop()
 
-st.write("---")
-st.write("**Note**: The data used in this dashboard is sourced from official EEA sensors and Open-Meteo.")
+last_ts = pd.Timestamp(row["Start"])
+st.caption(
+    f"Timestamp (UTC): **{last_ts.strftime('%Y-%m-%d %H:%M')}** · {data_source_line(selected_city)}"
+)
+
+p25, p10, n2 = float(row["PM2.5"]), float(row["PM10"]), float(row["NO2"])
+k25, lab25 = pm25_band(p25)
+k10, lab10 = pm10_band(p10)
+kn2, labn2 = no2_band(n2)
+
+st.markdown(plain_summary(selected_city, p25))
+
+cards = [
+    (k25, "PM2.5", f"{p25:.1f} µg/m³", lab25),
+    (k10, "PM10", f"{p10:.1f} µg/m³", lab10),
+    (kn2, "NO2", f"{n2:.1f} µg/m³", labn2),
+]
+cols = st.columns(3)
+for col, (k, title, val, lab) in zip(cols, cards):
+    with col:
+        st.markdown(
+            f'<div class="metric-card {k}"><h4>{title}</h4><h2>{val}</h2><p>{lab}</p></div>',
+            unsafe_allow_html=True,
+        )
+
+st.divider()
+st.caption(
+    "Forecasts use an **XGBoost** model (24 h ahead PM2.5) trained on the shared feature table; see **Forecast** and **Policy** pages."
+)

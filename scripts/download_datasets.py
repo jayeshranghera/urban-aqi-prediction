@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Download all EEA + weather data for Urban AQI project.
+"""Download EEA zips and Open-Meteo **weather** CSVs for Urban AQI.
+
+Hourly **air-quality** series for Paris and Rome are fetched by `urban_aqi.openmeteo_series`
+and cached under `data/raw/openmeteo_aq/` when you run `python scripts/run_pipeline.py`
+(the bundled EEA extract covers Berlin and Madrid only).
 
 Cities: Berlin, Madrid, Paris, Rome
 Outputs:

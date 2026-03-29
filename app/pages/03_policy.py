@@ -1,27 +1,63 @@
-import streamlit as st
-import pandas as pd
+import sys
 from pathlib import Path
 
-st.set_page_config(page_title="Policy & Health", layout="centered")
+import streamlit as st
 
-st.title("EU Clean Air Directive & Public Health")
+APP_DIR = Path(__file__).resolve().parent.parent
+ROOT = APP_DIR.parent
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(APP_DIR))
 
-st.write("### The Legal Limits")
-st.write("The European Union has strict policy frameworks governing local air quality. When cities consistently breach these limits, they risk infringement procedures from the European Commission.")
+from aqi_data import load_policy_rules, load_policy_summary, project_paths_ok  # noqa: E402
 
-data = {
-    'Pollutant': ['PM2.5', 'PM10', 'NO2', 'O3'],
-    'Good': ['≤ 10', '≤ 20', '≤ 40', '≤ 50'],
-    'Moderate': ['10 - 20', '20 - 35', '40 - 90', '50 - 100'],
-    'Poor': ['20 - 25', '35 - 50', '90 - 120', '100 - 130']
-}
-df_rules = pd.DataFrame(data)
+st.set_page_config(page_title="Policy & health", layout="wide")
 
-st.table(df_rules)
+st.title("EU-oriented bands and health messaging")
 
-st.write("### Precautionary Advice")
-st.warning("**For Moderate Days**: Asthmatic individuals or those with respiratory issues should limit strenuous outdoor activity.")
-st.error("**For Poor Days**: The general public should avoid prolonged outdoor exercise, and vulnerable groups must stay indoors.")
+ok, missing = project_paths_ok()
+if not ok:
+    st.error("Missing policy rules.")
+    st.code("\n".join(missing))
+    st.stop()
 
-st.write("### Policy Recommendations")
-st.success("For cities like Madrid and Paris struggling with NO2: Accelerate Low Emission Zone (LEZ) adoption. For cities suffering PM spikes: Manage industrial and construction dust protocols during drought weeks.")
+st.markdown(
+    "### Concentration bands (`eu_aqi_policy_thresholds.csv`)"
+)
+st.caption(
+    "These CSV values drive categorical colouring in the app. They support risk communication; **legal compliance** uses official limit values, averaging periods, and approved measurement methods."
+)
+
+rules = load_policy_rules()
+display = rules.rename(
+    columns={
+        "metric": "Metric",
+        "good_max": "Good — upper bound (µg/m³)",
+        "moderate_max": "Moderate — upper bound",
+        "poor_max": "Poor — upper bound",
+        "very_poor_max": "Very poor — upper bound",
+        "extremely_poor_min": "Extremely poor — from (µg/m³)",
+    }
+)
+st.dataframe(display, use_container_width=True, hide_index=True)
+
+st.markdown("### Indicative exceedances (`policy_summary.csv`)")
+summary = load_policy_summary()
+if summary is not None and not summary.empty:
+    st.dataframe(summary.round(2), use_container_width=True, hide_index=True)
+    st.caption(
+        "Counts scale hourly threshold breaches by 24 to approximate **day-equivalents** for dashboard use only."
+    )
+else:
+    st.info("Run `python scripts/run_pipeline.py` or notebook `05_policy.ipynb` to generate `policy_summary.csv`.")
+
+st.markdown("### Public-health style guidance")
+st.warning(
+    "**Moderate and above (sensitive groups):** limit prolonged vigorous outdoor activity when pollution is elevated."
+)
+st.error(
+    "**Poor and above:** shorten time outdoors for everyone; vulnerable groups should prioritise indoor environments when feasible."
+)
+
+st.success(
+    "**Policy angle:** NO2 is often traffic-linked (low-emission zones, fleet turnover); PM episodes may track meteorology and regional sources — pair forecasts with local authority advisories."
+)

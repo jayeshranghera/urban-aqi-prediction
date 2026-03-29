@@ -2,6 +2,9 @@ data/raw/eea/unzipped/
 *.zip
 *.parquet
 !data/processed/*.parquet
+!data/raw/openmeteo_aq/*.parquet
 *.duckdb
+# keep trained artefact for Docker / HF deploy
+!models/model.pkl
 __pycache__/
 .DS_Store

@@ -1,1 +1,16 @@
-{"features": ["hour", "dayofweek", "month", "is_weekend", "PM25_lag1", "PM25_lag24", "PM25_roll24", "temperature_2m", "relative_humidity_2m", "wind_speed_10m"], "mae": 7.741652081392965, "rmse": 10.47737346425142}
+{
+  "features": [
+    "hour",
+    "dayofweek",
+    "month",
+    "is_weekend",
+    "PM25_lag1",
+    "PM25_lag24",
+    "PM25_roll24",
+    "temperature_2m",
+    "relative_humidity_2m",
+    "wind_speed_10m"
+  ],
+  "mae": 5.85719301379284,
+  "rmse": 8.613468170009657
+}
