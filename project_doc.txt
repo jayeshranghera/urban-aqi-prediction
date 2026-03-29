@@ -1,0 +1,330 @@
+URBAN AQI PREDICTION
+Project Documentation
+Berlin · Madrid
+2022 – 2025 | EU Air Quality + Policy + ML
+
+Prepared by: Jayesh Ranghera
+Portfolio Project | March 2026
+
+1. Project Overview
+Urban AQI Prediction is a data science and machine learning project that forecasts Air Quality Index (AQI) levels for major European cities using official government sensor data. The project bridges two domains that are rarely combined in data science portfolios — environmental data science and public policy — making it uniquely relevant for roles at the intersection of AI, governance, and sustainability.
+The project is built entirely on real, official data from the European Environment Agency (EEA), supplemented with meteorological data from Open-Meteo. It is designed to be deployed as a live, interactive Streamlit dashboard on Hugging Face Spaces, accessible 24/7 to anyone.
+1.1 Why this project was built
+Air pollution is one of the most serious public health crises in Europe. According to the European Environment Agency, fine particulate matter (PM2.5) alone is responsible for over 300,000 premature deaths per year in Europe. Despite this, most citizens have no easy way to understand what the air quality around them means for their health, or how it compares to EU legal limits.
+This project was built to solve that gap — creating a tool that not only predicts future AQI levels but also translates those predictions into actionable, policy-grounded safety recommendations that any non-technical person can understand.
+From a career perspective, this project was designed to demonstrate real-world skills that are directly relevant to data analyst and ML engineer roles in Germany and the broader EU — particularly roles at government agencies, think tanks, environmental consulting firms, and technology companies working on sustainability.
+1.2 What makes this project different
+	•	Uses official EEA government sensor data, not Kaggle datasets
+	•	Includes a policy analysis layer based on EU Clean Air Directive thresholds
+	•	Deployed live on Hugging Face Spaces — 24/7, no sleep mode
+	•	DuckDB SQL database layer — demonstrates data engineering skills beyond basic pandas
+	•	Combines ML prediction with public health safety recommendations
+	•	Built by someone with a Political Science background — rare in data science portfolios
+
+2. Problem Statement
+Air quality in European cities fluctuates significantly based on traffic patterns, weather conditions, industrial activity, and seasonal factors. While real-time AQI data is available from monitoring stations, there is no widely accessible tool that:
+	•	Predicts AQI levels for the next 7 days
+	•	Explains what those levels mean for a person's health in plain language
+	•	Tells users whether conditions are safe to go outside, exercise, or open windows
+	•	Shows how their city compares to other European cities
+	•	Flags when pollution levels breach EU legal thresholds
+
+This project solves all five of these problems in a single dashboard.
+2.1 Target users
+The dashboard is designed for two types of users:
+General public
+	•	Residents of Berlin or Madrid who want to know if it is safe to go for a run
+	•	Parents checking air quality before letting children play outside
+	•	People with asthma or respiratory conditions planning their day
+Policy and research audience
+	•	Urban planners and environmental analysts comparing city performance against EU standards
+	•	Researchers studying the relationship between weather patterns and pollution
+	•	Journalists covering air quality policy compliance in EU member states
+
+3. Data Sources
+3.1 EEA Air Quality Data
+Primary pollution data is sourced from the European Environment Agency (EEA) official download portal. This is the same data used by EU governments for policy compliance reporting.
+
+Parameter
+Details
+Source
+European Environment Agency (EEA)
+Coverage
+Berlin (Germany), Madrid (Spain)
+Years
+2022 and 2025
+Frequency
+Hourly measurements
+Pollutants
+PM2.5, PM10, NO2
+Format
+Apache Parquet files
+Total records
+~2.37 million rows
+Station count
+272 monitoring stations across both cities
+
+3.2 Open-Meteo Weather Data
+Meteorological data is sourced from Open-Meteo, a free and open-source weather API that provides historical reanalysis data.
+
+Weather Variable
+Why it matters for AQI
+Temperature (2m)
+Higher temperatures increase O3 formation
+Relative humidity
+Affects PM2.5 concentration and dispersion
+Surface pressure
+Low pressure traps pollutants near ground
+Precipitation
+Rain washes out particulate matter
+Wind speed (10m)
+High wind disperses pollutants
+
+3.3 EU Policy Thresholds
+AQI categories are derived from the EU Clean Air Directive and WHO guidelines. These thresholds are used both for labelling training data and for generating policy-grounded safety alerts in the dashboard.
+
+Pollutant
+Good
+Moderate
+Poor
+Very Poor
+Extremely Poor
+PM2.5 (µg/m³)
+≤10
+10–20
+20–25
+25–50
+>50
+PM10 (µg/m³)
+≤20
+20–35
+35–50
+50–100
+>100
+NO2 (µg/m³)
+≤40
+40–90
+90–120
+120–230
+>230
+
+4. Technology Stack
+Layer
+Tool
+Purpose
+Data ingestion
+Python + Requests
+Download EEA parquet files and weather CSVs
+Data processing
+Pandas + PyArrow
+Load, clean, and transform raw data
+Database
+DuckDB + SQL
+Store clean data, run analytical queries
+Feature engineering
+Pandas + NumPy
+Lag features, time features, AQI labels
+ML model
+XGBoost / LightGBM
+7-day AQI forecasting
+Experiment tracking
+Jupyter Notebooks
+Reproducible analysis pipeline
+Dashboard
+Streamlit
+Interactive web application
+Deployment
+Hugging Face Spaces
+24/7 live hosting, Docker-based
+Version control
+Git + GitHub
+Code management and portfolio visibility
+
+5. Project Pipeline — 5 Notebooks
+The project is structured as a sequential pipeline of 5 Jupyter notebooks, each producing an output that feeds the next stage.
+Notebook 01 — Exploratory Data Analysis (01_eda.ipynb)
+	•	Load all EEA parquet files from 4 folders (e1a_2022, e1a_2025, e2a_2022, e2a_2025)
+	•	Map station IDs to city names (Berlin: DEBE prefix, Madrid: SP_28 prefix)
+	•	Map numeric pollutant codes to readable names (8=PM2.5, 7=PM10, 5=NO2)
+	•	Filter to valid measurements only (Validity flag = 1 or 2)
+	•	Parse timestamps and check date range coverage
+	•	Load Open-Meteo weather CSVs for Berlin and Madrid
+	•	Merge EEA pollution data with weather data on timestamp and city
+	•	Save output: data/processed/merged_hourly_raw.parquet
+
+Notebook 02 — Preprocessing + DuckDB (02_preprocessing.ipynb)
+	•	Load merged_hourly_raw.parquet
+	•	Handle missing values using forward-fill and city-level median imputation
+	•	Remove outliers using IQR-based filtering per pollutant per city
+	•	Create DuckDB database: data/processed/aqi_database.duckdb
+	•	Load clean data into DuckDB as a structured table
+	•	Run SQL analytical queries: monthly averages, peak pollution hours, city comparisons
+	•	Run EU threshold compliance queries: how many hours did each city exceed limits
+	•	Save output: data/processed/aqi_clean.parquet
+
+Notebook 03 — Feature Engineering (03_features.ipynb)
+	•	Load aqi_clean.parquet
+	•	Add time-based features: hour of day, day of week, month, season, is_weekend
+	•	Add lag features: PM2.5 at t-1h, t-2h, t-3h, t-6h, t-12h, t-24h
+	•	Add rolling mean features: 3h, 6h, 12h, 24h rolling averages
+	•	Create AQI category label from EU thresholds (Good / Moderate / Poor / Very Poor / Extremely Poor)
+	•	Create binary target: will PM2.5 exceed 25 µg/m³ in the next 24 hours
+	•	Save output: data/processed/features.parquet
+
+Notebook 04 — ML Modelling (04_modelling.ipynb)
+	•	Load features.parquet
+	•	Time-based train/test split (2022 = train, 2025 = test)
+	•	Train XGBoost regression model for 7-day hourly AQI forecast
+	•	Evaluate using MAE, RMSE, and R² score
+	•	Train LightGBM as comparison model
+	•	Feature importance analysis — which features drive predictions most
+	•	Save best model: models/model.pkl
+	•	Save model metadata: models/model_metadata.json
+
+Notebook 05 — Policy Analysis (05_policy.ipynb)
+	•	Load predictions and actual data
+	•	Calculate EU Clean Air Directive compliance for each city
+	•	Identify which months and hours consistently breach thresholds
+	•	Generate city ranking by annual average PM2.5
+	•	Compare Berlin vs Madrid across all pollutants
+	•	Generate policy recommendation text for dashboard
+	•	Export summary statistics for dashboard consumption
+
+6. Streamlit Dashboard — User Experience
+The dashboard is built for non-technical users. Every screen is designed so that someone with no data science background can understand it immediately.
+Page 1 — Home / City Overview
+	•	City selector: Berlin or Madrid
+	•	Current AQI score displayed as a large colored gauge (Green / Yellow / Orange / Red / Purple)
+	•	Plain English summary: 'Air quality in Berlin today is MODERATE. Sensitive groups should limit outdoor activity.'
+	•	Current readings for PM2.5, PM10, and NO2 with color-coded status badges
+	•	Today's weather summary: temperature, humidity, wind speed
+
+Page 2 — 7-Day Forecast
+	•	Interactive line chart showing predicted PM2.5, PM10, NO2 for next 7 days
+	•	Shaded bands showing EU threshold zones (Good / Moderate / Poor)
+	•	Daily summary cards: one per day, showing predicted AQI category and icon
+	•	Safety recommendation per day: 'Safe to exercise outdoors' / 'Wear a mask' / 'Stay indoors'
+	•	Best day of the week to go outside highlighted automatically
+
+Page 3 — City Comparison
+	•	Side-by-side comparison of Berlin vs Madrid
+	•	Bar charts comparing annual average PM2.5, PM10, NO2 for both cities
+	•	EU limit compliance table: how many days per year each city exceeded each threshold
+	•	Seasonal trend comparison: which city has worse winters / summers
+	•	Key insight callout: 'Madrid has 23% higher NO2 levels than Berlin on average'
+
+Page 4 — Policy & Health
+	•	EU Clean Air Directive summary — what the legal limits are and why
+	•	Health impact table: what each AQI level means for different groups (children, elderly, general public, athletes)
+	•	Precautionary actions by AQI level — visual, card-based layout
+	•	Monthly heatmap: which months are consistently worst in each city
+	•	Policy recommendation section: data-driven suggestions for reducing peak pollution
+
+7. Deployment
+The application will be deployed as a Docker-based Hugging Face Space, which provides 24/7 availability with no sleep mode — unlike the free tier of Streamlit Community Cloud.
+Component
+Details
+Platform
+Hugging Face Spaces
+Runtime
+Docker (custom Dockerfile)
+Availability
+24/7, no sleep mode
+URL format
+https://huggingface.co/spaces/jayeshranghera/urban-aqi-prediction
+Model storage
+model.pkl committed to repo or stored as HF dataset
+Data updates
+Static dataset (2022+2025), can be extended with live API calls
+
+8. Project Folder Structure
+Urban AQI Prediction/
+  app/
+    app.py                  ← Streamlit main app
+    pages/
+      01_forecast.py        ← 7-day forecast page
+      02_compare.py         ← city comparison page
+      03_policy.py          ← policy & health page
+  data/
+    raw/
+      eea/unzipped/         ← parquet files from EEA
+      weather/              ← Open-Meteo CSVs
+      rules/                ← EU threshold CSV
+    processed/
+      merged_hourly_raw.parquet
+      aqi_clean.parquet
+      aqi_database.duckdb
+      features.parquet
+  models/
+    model.pkl
+    model_metadata.json
+  notebooks/
+    01_eda.ipynb
+    02_preprocessing.ipynb
+    03_features.ipynb
+    04_modelling.ipynb
+    05_policy.ipynb
+  scripts/
+    download_datasets.py
+  Dockerfile
+  requirements.txt
+  README.md
+9. Current Status
+Phase
+Status
+Notes
+Data download
+Complete
+Berlin + Madrid, 2022 + 2025, ~2.37M rows
+Folder structure
+Complete
+All 4 EEA folders + weather CSVs ready
+01_eda.ipynb
+In progress
+Column mapping confirmed, ready to finalize
+02_preprocessing.ipynb
+Not started
+DuckDB setup pending
+03_features.ipynb
+Not started
+Depends on notebook 02
+04_modelling.ipynb
+Not started
+Depends on notebook 03
+05_policy.ipynb
+Not started
+Depends on notebook 04
+Streamlit dashboard
+Not started
+app.py skeleton exists
+Hugging Face deployment
+Not started
+Dockerfile to be written
+
+10. Portfolio Value
+This project demonstrates the following skills that are directly relevant to data analyst and ML engineer job applications in Germany:
+Skill demonstrated
+How
+Real data ingestion
+EEA official government API, parquet format, multi-folder pipeline
+Data cleaning
+Validity flag filtering, outlier removal, missing value imputation
+SQL / data engineering
+DuckDB database creation, analytical SQL queries
+Feature engineering
+Lag features, rolling means, time-based features
+Machine learning
+XGBoost regression, time-series train/test split, evaluation metrics
+Policy analysis
+EU Clean Air Directive compliance, threshold breach analysis
+Visualization
+Streamlit dashboard, Plotly charts, AQI gauges
+Deployment
+Docker, Hugging Face Spaces, 24/7 availability
+Domain knowledge
+Air quality science, EU environmental policy, public health
+Communication
+Dashboard designed for non-technical users
+
+
+Urban AQI Prediction — Project Document — Jayesh Ranghera — 2026

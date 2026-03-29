@@ -1,0 +1,5 @@
+metric,good_max,moderate_max,poor_max,very_poor_max,extremely_poor_min
+PM2.5_ug_m3,10,20,25,50,50
+PM10_ug_m3,20,35,50,100,100
+NO2_ug_m3,40,90,120,230,230
+O3_ug_m3,50,100,130,240,240

@@ -1,0 +1,7 @@
+data/raw/eea/unzipped/
+*.zip
+*.parquet
+!data/processed/*.parquet
+*.duckdb
+__pycache__/
+.DS_Store
