@@ -17,7 +17,7 @@ COPY notebooks/ notebooks/
 COPY scripts/ scripts/
 
 # expose port for Streamlit
-EXPOSE 8501
+EXPOSE 7860
 
 # run Streamlit app
 CMD ["streamlit", "run", "app/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
